@@ -1,0 +1,12 @@
+C:\Users\CEO\Desktop\왜가리\client\testserver\bin\Debug\testserver.exe.config
+C:\Users\CEO\Desktop\왜가리\client\testserver\bin\Debug\testserver.exe
+C:\Users\CEO\Desktop\왜가리\client\testserver\bin\Debug\testserver.pdb
+C:\Users\CEO\Desktop\왜가리\client\testserver\obj\Debug\testserver.csprojResolveAssemblyReference.cache
+C:\Users\CEO\Desktop\왜가리\client\testserver\obj\Debug\testserver.exe
+C:\Users\CEO\Desktop\왜가리\client\testserver\obj\Debug\testserver.pdb
+C:\Users\askdnwn\Desktop\client\testserver\bin\Debug\testserver.exe.config
+C:\Users\askdnwn\Desktop\client\testserver\obj\Debug\testserver.exe
+C:\Users\askdnwn\Desktop\client\testserver\obj\Debug\testserver.pdb
+C:\Users\askdnwn\Desktop\client\testserver\bin\Debug\testserver.exe
+C:\Users\askdnwn\Desktop\client\testserver\bin\Debug\testserver.pdb
+C:\Users\askdnwn\Desktop\client\testserver\obj\Debug\testserver.csprojResolveAssemblyReference.cache

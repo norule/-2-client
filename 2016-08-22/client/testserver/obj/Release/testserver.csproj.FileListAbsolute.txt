@@ -1,0 +1,5 @@
+C:\Users\askdnwn\Desktop\client\testserver\bin\Release\testserver.exe.config
+C:\Users\askdnwn\Desktop\client\testserver\bin\Release\testserver.exe
+C:\Users\askdnwn\Desktop\client\testserver\bin\Release\testserver.pdb
+C:\Users\askdnwn\Desktop\client\testserver\obj\Release\testserver.exe
+C:\Users\askdnwn\Desktop\client\testserver\obj\Release\testserver.pdb

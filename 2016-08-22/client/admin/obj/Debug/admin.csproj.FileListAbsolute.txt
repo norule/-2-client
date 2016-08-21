@@ -1,0 +1,7 @@
+C:\Users\CEO\Desktop\왜가리\client\admin\bin\Debug\admin.exe.config
+C:\Users\askdnwn\Desktop\client\admin\bin\Debug\admin.exe.config
+C:\Users\askdnwn\Desktop\client\admin\obj\Debug\admin.csprojResolveAssemblyReference.cache
+C:\Users\askdnwn\Desktop\client\admin\bin\Debug\admin.exe
+C:\Users\askdnwn\Desktop\client\admin\bin\Debug\admin.pdb
+C:\Users\askdnwn\Desktop\client\admin\obj\Debug\admin.exe
+C:\Users\askdnwn\Desktop\client\admin\obj\Debug\admin.pdb
