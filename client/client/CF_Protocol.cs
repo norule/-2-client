@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace CF_Protocol
 {
+
     struct CFLoginRequest
     {
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 12)]
@@ -50,6 +51,20 @@ namespace CF_Protocol
 
     public static class CFHelper
     {
+        public static List<int> BytesToList(byte[] body)
+        {
+            List<int> list = new List<int>();
+            for (int idx = 0; idx < (body.Length / 4); idx++)
+            {
+                byte[] tmpArr = new byte[4];
+                Array.Copy(body, idx * 4, tmpArr, 0, 4); // tmpArr에 byte4개 들어가있음.
+
+                int tmp = BitConverter.ToInt32(tmpArr, 0);
+                list.Add(tmp);
+            }
+            return list;
+        }
+
         public static byte[] StructureToByte(object obj)
         {
             int datasize = Marshal.SizeOf(obj);
@@ -159,7 +174,7 @@ namespace CF_Protocol
     }
     struct CFRoomCreateResponse
     {
-        int roomNum;
+        public int roomNum;
     }
 
     struct CFRoomListResponse
@@ -178,8 +193,12 @@ namespace CF_Protocol
     struct CFRoomJoinRedirectResponse
     {
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 15)]
-        char[] ip;
-        int port;
+        public char[] ip;
+
+        public int port;
+
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 64)]
+        public char[] cookie;
     }
 
 

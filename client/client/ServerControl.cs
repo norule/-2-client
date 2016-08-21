@@ -12,11 +12,12 @@ namespace client
 {
     public class ServerControl
     {
+        public string name;
         public dgDisconnect Disconnect;//본체용
         public dgDataProcess DataAnalysis;
         public dgConnect CPconnect = null;
 
-        private const int HEARTBEATINTERVAL = 50000;
+        private const int HEARTBEATINTERVAL = 30;
         private int heartbeat = 0;
         private Timer heartbeatTimer = new Timer();
 
@@ -31,7 +32,6 @@ namespace client
 
         private SocketAsyncEventArgs sendEvent = new SocketAsyncEventArgs();
         private SocketAsyncEventArgs receiveHeaderEvent = new SocketAsyncEventArgs();
-        private SocketAsyncEventArgs receiveDataEvent = new SocketAsyncEventArgs();
 
         public ServerControl(string ip, int port)
         {
@@ -77,7 +77,7 @@ namespace client
                 //heartbeat
                 heartbeatTimer = new System.Timers.Timer();
                 heartbeatTimer.Interval = HEARTBEATINTERVAL * 1000;
-                heartbeatTimer.Elapsed += new System.Timers.ElapsedEventHandler(SendHeartbeat);
+                heartbeatTimer.Elapsed += new System.Timers.ElapsedEventHandler(CheckHeartbeat);
                 heartbeatTimer.Start();
                 //SendMSG(HhhHelper.Code.HEARTBEAT);
 
@@ -111,6 +111,8 @@ namespace client
                 }
                 else
                 {
+                    SocketAsyncEventArgs receiveDataEvent = new SocketAsyncEventArgs();
+
                     receiveDataEvent.Completed += new EventHandler<SocketAsyncEventArgs>(ReceiveBody_Completed);
                     receiveDataEvent.SetBuffer(receivePacket.data, 0, receivePacket.header.size);
                     receiveDataEvent.UserToken = receivePacket;
@@ -131,7 +133,7 @@ namespace client
             Socket client = (Socket)sender;
             TryReceiveAsync(client, receiveHeaderEvent);
         }
-        private void SendHeartbeat(object sender, System.Timers.ElapsedEventArgs e)
+        private void CheckHeartbeat(object sender, System.Timers.ElapsedEventArgs e)
         {
             if (++heartbeat > 3)
             {
@@ -139,16 +141,17 @@ namespace client
                 heartbeat = 0;
                 return;
             }
-            SendMSG(HhhHelper.Code.HEARTBEAT);
+            //SendMSG(HhhHelper.Code.HEARTBEAT);
         }
         public bool SendMSG(ushort command, byte[] data = null)
         {
-            Console.Beep();
+            sendPacket = new Packet();
+
             if (servsocket == null)
                 return false;
 
             sendPacket.header.code = command;
-            sendPacket.header.uid = Client.uid;
+            sendPacket.header.uid=Client.uid;
 
             if (data == null)
             {
@@ -184,17 +187,21 @@ namespace client
 
             Disconnect(this);
         }
-        private bool TryReceiveAsync(Socket sock, SocketAsyncEventArgs sevent)
+        private void TryReceiveAsync(Socket sock, SocketAsyncEventArgs sevent)
         {
             try
             {
-                bool result = sock.ReceiveAsync(sevent);
-                return result;
+                sock.ReceiveAsync(sevent);
+                
             }
             catch (SocketException e)
             {
                 Console.WriteLine(e.ToString());
-                return false;
+                
+            }
+            catch (InvalidOperationException e2)
+            {
+                
             }
 
         }

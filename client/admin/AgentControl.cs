@@ -6,16 +6,12 @@ using System.Timers;
 using System.Net;
 using System.Net.Sockets;
 using Junhaehok;
-using CF_Protocol;
 
-namespace client
+namespace Admin
 {
-    public class ServerControl
+    public class AgentControl
     {
-        public string name;
-        public dgDisconnect Disconnect;//본체용
         public dgDataProcess DataAnalysis;
-        public dgConnect CPconnect = null;
 
         private const int HEARTBEATINTERVAL = 30;
         private int heartbeat = 0;
@@ -24,7 +20,7 @@ namespace client
         private const int CONNECTIONTIMEOUT = 5;
         private Timer connectionTimeout = new Timer();
 
-        public Socket servsocket;
+        public Socket adminSock;
         public IPEndPoint myIPEP;
 
         private Packet sendPacket = new Packet();
@@ -32,12 +28,15 @@ namespace client
 
         private SocketAsyncEventArgs sendEvent = new SocketAsyncEventArgs();
         private SocketAsyncEventArgs receiveHeaderEvent = new SocketAsyncEventArgs();
-        //private SocketAsyncEventArgs receiveDataEvent = new SocketAsyncEventArgs();
 
-        public ServerControl(string ip, int port)
+        public int roomCount;
+        public int userCount;
+        public bool alive;
+
+        public AgentControl(IPEndPoint inputIPEP)
         {
-            myIPEP = new IPEndPoint(IPAddress.Parse(ip), port);
-            servsocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            myIPEP = inputIPEP;
+            adminSock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         }
 
         public void Connecting()
@@ -61,35 +60,33 @@ namespace client
         {
             connectionTimeout.Stop();
             Socket connectSocket = (Socket)sender;
-            servsocket = connectSocket;
+            adminSock = connectSocket;
 
             //connected
             if (true == connectSocket.Connected)
             {
-                receiveHeaderEvent.UserToken = servsocket;
+                receiveHeaderEvent.UserToken = adminSock;
                 //receive header
                 receiveHeaderEvent.SetBuffer(new byte[HEADER_SIZE], 0, HEADER_SIZE);
                 //receive Event
                 receiveHeaderEvent.Completed += new EventHandler<SocketAsyncEventArgs>(ReceiveHeader_Completed);
                 //request receive
-                TryReceiveAsync(servsocket, receiveHeaderEvent);
-                Console.WriteLine("*** Connected ***");
+                TryReceiveAsync(adminSock, receiveHeaderEvent);
 
                 //heartbeat
                 heartbeatTimer = new System.Timers.Timer();
                 heartbeatTimer.Interval = HEARTBEATINTERVAL * 1000;
                 heartbeatTimer.Elapsed += new System.Timers.ElapsedEventHandler(CheckHeartbeat);
                 heartbeatTimer.Start();
-                //SendMSG(HhhHelper.Code.HEARTBEAT);
 
-                //connection passing
-                CPconnect?.Invoke(this);
+                SendMSG(HhhHelper.Code.SERVER_INFO);
             }
             else
             {
                 Disconnection();
             }
         }
+
         private void ReceiveHeader_Completed(object sender, SocketAsyncEventArgs e)
         {
             heartbeat = 0;
@@ -142,17 +139,16 @@ namespace client
                 heartbeat = 0;
                 return;
             }
-            //SendMSG(HhhHelper.Code.HEARTBEAT);
         }
         public bool SendMSG(ushort command, byte[] data = null)
         {
             sendPacket = new Packet();
 
-            if (servsocket == null)
+            if (adminSock == null)
                 return false;
 
             sendPacket.header.code = command;
-            sendPacket.header.uid=Client.uid;
+            sendPacket.header.uid = 0;
 
             if (data == null)
             {
@@ -167,7 +163,7 @@ namespace client
 
             byte[] szData = HhhHelper.PacketToBytes(sendPacket);
             sendEvent.SetBuffer(szData, 0, szData.Length);
-            servsocket.SendAsync(sendEvent);
+            adminSock.SendAsync(sendEvent);
 
             return true;
         }
@@ -175,18 +171,16 @@ namespace client
         public void Disconnection()
         {
             //init socket
-            if (servsocket != null ? servsocket.Connected : false)
+            if (adminSock != null ? adminSock.Connected : false)
             {
-                servsocket.Close();
+                adminSock.Close();
             }
 
             //heartbeat stop
             heartbeatTimer?.Stop();
 
             heartbeat = 0;
-            servsocket = null;
-
-            Disconnect(this);
+            adminSock = null;
         }
         private void TryReceiveAsync(Socket sock, SocketAsyncEventArgs sevent)
         {

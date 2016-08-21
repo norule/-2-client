@@ -43,8 +43,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Program.cs" />
+    <Compile Include="AAProtocol.cs" />
+    <Compile Include="admin.cs" />
+    <Compile Include="HHHHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="AgentControl.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

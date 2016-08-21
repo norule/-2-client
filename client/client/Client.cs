@@ -15,11 +15,11 @@ namespace client
 
     class Client
     {
-        private List<ServerControl> serverList = new List<ServerControl>();
+        private List<ServerControl> serverList;
         
         private int roomNumber;
         private int Usercommand;
-        private string[] roomList = new string[0];
+        private List<int> roomList = new List<int>();
 
         private ClientState myState = ClientState.Loading;
         private CFSigninResponse roomConnectionINFO = default(CFSigninResponse);
@@ -49,19 +49,27 @@ namespace client
             client.Process();
         }
         
+        private void Init()
+        {
+            roomNumber = 0;
+            serverList = new List<ServerControl>();
+            Usercommand = 0;
+            myState = ClientState.Connect;
+            errormsg = "";
+        }
         public void Start()
         {
-            //myState = ClientState.None;
-            myState = ClientState.Connect;
-            //Usercommand = 1;
-
+            Init();
 
             ServerControl loginServer = new ServerControl("10.100.58.4", 11000);
             //ServerControl loginServer = new ServerControl("127.0.0.1", 11000);
             loginServer.DataAnalysis = DataAnalysis;
             loginServer.Disconnect = Disconnection;
+            loginServer.name = "login";
             loginServer.Connecting();
-            serverList.Add(loginServer);
+
+            lock (serverList)
+                serverList.Add(loginServer);
         }
 
         public void Process()
@@ -192,12 +200,12 @@ namespace client
                         roomNumber = 0;
                         string lobbyMsg;
 
-                        Console.WriteLine("-- %Create / %Join / %ModifyPassword / %DELETEACCOUNT --");
-                        Console.WriteLine("--                      Room List                     --");
-                        Console.WriteLine("--------------------------------------------------------");
+                        Console.WriteLine("-- %Create / %Join / %ModifyPassword / %DELETEACCOUNT / %Logout / %update--");
+                        Console.WriteLine("--                              Room List                                --");
+                        Console.WriteLine("---------------------------------------------------------------------------");
                         for (int i = 0; i < roomList.Count(); i++)
                         {
-                            Console.Write("Room : " + string.Format("{0:000}", roomList[i])+"  ");
+                            Console.Write("Room : " + string.Format("{0:000}", roomList[i].ToString())+"  ");
                             if (i % 3 == 0)
                                 Console.WriteLine();
                         }
@@ -231,7 +239,7 @@ namespace client
                                     myState = ClientState.Loading;
                                 break;
                             }
-                            else if (lobbyMsg.ToUpper().Equals("%ModifyPassword"))
+                            else if (lobbyMsg.ToUpper().Equals("%MODIFYPASSWORD"))
                             {
                                 PW = null;
                                 while (true)
@@ -243,8 +251,13 @@ namespace client
                                     {
                                         Console.WriteLine("Password length check(Enter)");
                                         Console.ReadLine();
+                                        continue;
+                                    }
+                                    else
+                                    {
                                         break;
                                     }
+                                    
                                 }
                                 CFUpdateUserRequest CFUR = new CFUpdateUserRequest(PW.ToCharArray());
                                 serverList[0].SendMSG(HhhHelper.Code.UPDATE_USER, CFHelper.StructureToByte(CFUR));
@@ -257,6 +270,20 @@ namespace client
                                     myState = ClientState.Loading;
                                 break;
                             }
+                            else if (lobbyMsg.ToUpper().Equals("%LOGOUT"))
+                            {
+                                myState = ClientState.Login;
+                                serverList[0].SendMSG(HhhHelper.Code.SIGNOUT);
+                                break;
+                            }
+                            else if (lobbyMsg.ToUpper().Equals("%UPDATE"))
+                            {
+                                myState = ClientState.Loading;
+                                serverList[0].SendMSG(HhhHelper.Code.ROOM_LIST);
+                                break;
+                            }
+
+
                             else
                             {
                                 Console.WriteLine("check commands");
@@ -278,6 +305,7 @@ namespace client
                             msg = Console.ReadLine();
 
                             MessageProcess(msg);
+                            Delay(100);
                         } while (myState == ClientState.Room);
 
                         break;
@@ -300,7 +328,7 @@ namespace client
         {
             //스테이트 변경하고 Usercommand지우면 될꺼야 아마
             //나중에 하트비트에 옮겨
-            if(uid!=0)
+            if(uid==0)
                 uid = protocol.header.uid;
 
             switch (protocol.header.code)
@@ -315,7 +343,7 @@ namespace client
                     myState = ClientState.Connect;
                     break;
 
-                case HhhHelper.Code.UPDATE_USER_USER_FAIL:
+                case HhhHelper.Code.UPDATE_USER_FAIL:
                     errormsg = "UPDATE_USER_FAIL";
                     break;
 
@@ -329,7 +357,8 @@ namespace client
 
                 case HhhHelper.Code.DELETE_USER_SUCCESS:
                     errormsg = "DELETE_USER_SUCCESS";
-                    myState = ClientState.Login;
+                    //myState = ClientState.Login;
+                    Start();
                     break;
 
                 case HhhHelper.Code.SIGNIN_FAIL:
@@ -348,6 +377,7 @@ namespace client
                     CPControl.Disconnect = Disconnection;
                     CPControl.DataAnalysis = DataAnalysis;
                     CPControl.CPconnect = CPconnect;
+                    CPControl.name = "room";
                     CPControl.Connecting();
                     
                     serverList.Add(CPControl);
@@ -356,14 +386,19 @@ namespace client
 
                 case HhhHelper.Code.INITIALIZE_FAIL:
                     errormsg = "INITIALIZE_FAIL";
-                    serverList[1].Disconnection();
+                    serverList?[1].Disconnection();
+                    myState = ClientState.Lobby;
                     break;
 
                     //cp success
                 case HhhHelper.Code.INITIALIZE_SUCCESS:
-                    serverList[0].Disconnection();
-                    serverList[0].CPconnect = null;
+                    errormsg = "INITIALIZE_SUCCESS";
+                    lock (serverList)
+                    {
+                        serverList[0].Disconnection();
 
+                        serverList[0].CPconnect = null;
+                    }
                     if(roomNumber==0)
                         serverList[0].SendMSG(HhhHelper.Code.ROOM_LIST);
                     else
@@ -382,26 +417,42 @@ namespace client
                     break;
 
                 case HhhHelper.Code.ROOM_LIST_SUCCESS:
+                    errormsg = "ROOM_LIST_SUCCESS";
                     RoomListParsing(protocol.data);
                     myState = ClientState.Lobby;
                     break;
 
                 case HhhHelper.Code.JOIN_SUCCESS:
-
+                    errormsg = "JOIN_SUCCESS";
                     myState = ClientState.Room;
                     break;
 
                 case HhhHelper.Code.JOIN_REDIRECT:
+                    try
+                    {
+                        errormsg = "JOIN_REDIRECT";
 
-                    ServerControl JoinCP = new ServerControl(new string(roomConnectionINFO.ip), roomConnectionINFO.port);
+                        CFRoomJoinRedirectResponse JRD = new CFRoomJoinRedirectResponse();
+                        JRD = (CFRoomJoinRedirectResponse)CFHelper.ByteToStructure(protocol.data, typeof(CFRoomJoinRedirectResponse));
 
-                    JoinCP.Disconnect = Disconnection;
-                    JoinCP.DataAnalysis = DataAnalysis;
-                    JoinCP.CPconnect = CPconnect;
-                    JoinCP.Connecting();
+                        string JRD_IP = new string(JRD.ip).Replace("\0", string.Empty);
 
-                    serverList.Add(JoinCP);
-                    
+                        roomConnectionINFO.cookie = JRD.cookie;
+
+                        ServerControl JoinCP = new ServerControl(JRD_IP, JRD.port);
+                        JoinCP.Disconnect = Disconnection;
+                        JoinCP.DataAnalysis = DataAnalysis;
+                        JoinCP.CPconnect = CPconnect;
+                        JoinCP.Connecting();
+
+                        serverList.Add(JoinCP);
+
+                    }catch(Exception e)
+                    {
+
+                        Console.WriteLine(e.ToString());
+                        Console.ReadLine();
+                    }
                     break;
 
                 case HhhHelper.Code.JOIN_FAIL:
@@ -425,6 +476,11 @@ namespace client
                     break;
 
                 case HhhHelper.Code.CREATE_ROOM_SUCCESS:
+                    errormsg = "CREATE_ROOM_SUCCESS";
+
+                    CFRoomCreateResponse roomnum = (CFRoomCreateResponse)CFHelper.ByteToStructure(protocol.data, typeof(CFRoomCreateResponse));
+                    roomNumber = roomnum.roomNum;
+
                     myState = ClientState.Room;
                     break;
 
@@ -433,26 +489,19 @@ namespace client
                     break;
 
                 case HhhHelper.Code.LEAVE_ROOM_SUCCESS:
+                    errormsg = "LEAVE_ROOM_SUCCESS";
                     roomNumber = 0;
                     myState = ClientState.Lobby;
                     break;
 
-                case HhhHelper.Code.SIGNOUT_FAIL:
-                    errormsg = "SIGNOUT_FAIL";
-                    break;
-
-                case HhhHelper.Code.SIGNOUT_SUCCESS:
-                    roomNumber = 0;
-                    myState = ClientState.Login;
-                    break;
 
                 case HhhHelper.Code.MSG_FAIL:
                     errormsg = "MSG_FAIL";
                     break;
 
-                case HhhHelper.Code.MSG_SUCCESS:
+                case HhhHelper.Code.MSG:
                     string message = Encoding.UTF8.GetString(protocol.data,0,protocol.data.Length);
-                    Console.Write(message);
+                    Console.Write(message+"\n");
                     break;
 
                 case HhhHelper.Code.HEARTBEAT_SUCCESS:
@@ -479,8 +528,8 @@ namespace client
                     break;
 
                 case "%LOGOUT":
-                    myState = ClientState.Loading;
                     serverList[0].SendMSG(HhhHelper.Code.SIGNOUT);
+                    Start();
                     break;
 
                 default:
@@ -490,8 +539,9 @@ namespace client
         }
         private void Disconnection(ServerControl serv )
         {
+            lock (serverList)
+                serverList.Remove(serv);
 
-            serverList.Remove(serv);
             serv = default(ServerControl);
 
             if(serverList.Count==0)
@@ -525,7 +575,7 @@ namespace client
         private void RoomListParsing(byte[] input)
         {
             //5;4;8;;8;4; 이런식으로 올꺼임
-            roomList = Encoding.UTF8.GetString(input).Split(';');
+            roomList = CFHelper.BytesToList(input);
         }
 
     }
