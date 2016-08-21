@@ -1,0 +1,2 @@
+C:\Users\CEO\Desktop\왜가리\client\admin\bin\Debug\admin.exe.config
+C:\Users\askdnwn\Desktop\client\admin\bin\Debug\admin.exe.config
