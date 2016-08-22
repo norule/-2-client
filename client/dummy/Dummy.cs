@@ -13,11 +13,15 @@ namespace client
     public delegate void dgDisconnect(ServerControl serv);
     public delegate void dgDataProcess(ServerControl serv, Packet protocol);
 
-    class Client
+    class Dummy
     {
-        static int Initialize = 5;
-        private List<ServerControl> serverList;
+        //----
+        //dummy
+        private string IDPW;
         
+
+
+        private List<ServerControl> serverList;
         private int roomNumber;
         private int Usercommand;
         private List<int> roomList = new List<int>();
@@ -45,31 +49,37 @@ namespace client
 
         static void Main(string[] args)
         {
-            Client client = new Client();
-            client.Start();
-            client.Process();
+
+            Dummy[] dums = new Dummy[20];
+            int inx = 1;
+            int max = 20;
+
+            for (inx=1; inx <= max; inx++)
+            {
+                string idpw = "Dummy" + inx.ToString();
+                Dummy dummy = new Dummy();
+                dummy.Start(idpw);
+                dummy.Process();
+                dums[inx - 1] = dummy;
+                Delay(1000);
+            }
+            //Dummy dummy = new Dummy();
+            //dummy.Start();
+            //dummy.Process();
         }
         
         private void Init()
         {
             roomNumber = 0;
-            if (serverList?.Count > 0)
-            {
-                for (int i = 0; i < serverList.Count; i++)
-                {
-                    serverList[i].Disconnection();
-                }
-            }
             serverList = new List<ServerControl>();
             Usercommand = 0;
             myState = ClientState.Connect;
             errormsg = "";
         }
-        public void Start()
+        public void Start(string _IDPW)
         {
-            //http://10.100.58.5:80/wsJinhyehok///web
             Init();
-
+            IDPW = _IDPW;
             ServerControl loginServer = new ServerControl("10.100.58.4", 11000);
             loginServer.DataAnalysis = DataAnalysis;
             loginServer.Disconnect = Disconnection;
@@ -93,232 +103,79 @@ namespace client
                         break;
                     case ClientState.Connect:
 
-                        Console.WriteLine("1. Signup  2. Signin 3. Exit");
-
-                        while (true)
-                        {
-                            Console.Write(">>>");
-                            string input = Console.ReadLine();
-                            
-
-                            if(Int32.TryParse(input,out Usercommand))
-                            {
-                                if(Usercommand>=1 && Usercommand <= 2)
-                                {
-                                    break;
-                                }
-                                if (Usercommand == 3)
-                                    return;
-                            }
-                        }
                         myState = ClientState.Login;
                         break;
-
-
-                    //connected , Login
-                    #region case ClientState.Login:
                     case ClientState.Login:
 
-                        string ID = null;
-                        string PW = null;
 
-                        //write ID
-                        Console.Write("ID : ");
-                        ID = Console.ReadLine();
+                        CFLoginRequest logininfo = new CFLoginRequest(IDPW.ToCharArray(), IDPW.ToCharArray());
+                        serverList[0].trysendmsg(HhhHelper.Code.SIGNUP, CFHelper.StructureToByte(logininfo));
 
-                        if (0 >= ID.Length || MAXIMUM_ID_LENGTH <= ID.Length)
-                        {
-                            Console.WriteLine("ID length check(Enter)");
-                            Console.ReadLine();
-                            break;
-                        }
-
-                        //write Password
-                        Console.Write("Password : ");
-                        PW = Console.ReadLine();
-
-                        if (0 >= PW.Length || MAXIMUM_PW_LENGTH <= PW.Length)
-                        {
-                            Console.WriteLine("Password length check(Enter)");
-                            Console.ReadLine();
-                            break;
-                        }
-
-                        CFLoginRequest logininfo = new CFLoginRequest(ID.ToCharArray(), PW.ToCharArray());
                         
-                        //request login
-                        switch (Usercommand) 
-                        {
-                            case 1:
-                                if (serverList[0].trysendmsg(HhhHelper.Code.SIGNUP, CFHelper.StructureToByte(logininfo)))
-                                    myState = ClientState.Loading;
-                                break;
-
-                            case 2:
-                                if (serverList[0].trysendmsg(HhhHelper.Code.SIGNIN, CFHelper.StructureToByte(logininfo)))
-                                    myState = ClientState.Loading;
-                                break;
-                        }
-
                         break;
-                    #endregion case ClientState.Login:
-                    //loading
-                    #region case ClientState.loading :
                     case ClientState.Loading:
                         
                         Console.WriteLine("로딩 중");
                         Delay(100);
 
                         break;
-                    #endregion loading
-                    //Try reconnection
-                    #region case ClientState.Disconnect:
                     case ClientState.Disconnection:
 
-                        Console.WriteLine("*** Disconnected ***");
-                        Console.WriteLine("try agin? (y/n)");
-                        char d = Console.ReadKey().KeyChar;
-
-                        do
-                        {
-                            if (d == 'y' || d == 'Y')
-                            {
-                                //try conntect loginserver
-                                Start();
-                                break;
-                            }
-                            else if (d == 'n' || d == 'N')
-                            {
-                                return;
-                            }
-                            else
-                            {
-                                Console.WriteLine("\nY or N only");
-                                d = Console.ReadKey().KeyChar;
-                            }
-                        } while (true);
-
-                        Console.WriteLine();
+                        Start(IDPW);
                         break;
-                    #endregion case ClientState.Disconnect:
-                    //in lobby , createRoom() , JoinRoom()
-                    #region case ClientState.Lobby :
                     case ClientState.Lobby:
 
                         roomNumber = 0;
-                        string lobbyMsg;
+                        
+                        Random rand = new Random();
 
-                        Console.WriteLine("-- %Create / %Join / %ModifyPassword / %DELETEACCOUNT / %Logout / %update--");
-                        Console.WriteLine("--                              Room List                                --");
-                        Console.WriteLine("---------------------------------------------------------------------------");
-                        for (int i = 0; i < roomList.Count(); i++)
+                        rand.Next(0, roomList.Count);
+
+
+                        if (roomList.Count > 0)
                         {
-                            Console.Write("Room : " + string.Format("{0:000}", roomList[i].ToString())+"  ");
-                            if (i % 3 == 0)
-                                Console.WriteLine();
-                        }
-
-                        while (true)
-                        {
-                            Console.Write(">>> :");
-                            lobbyMsg = Console.ReadLine();
-
-                            if (lobbyMsg.ToUpper().Equals("%JOIN"))
+                            //random join or create
+                            if(rand.Next(0, roomList.Count) % 2 == 0)
                             {
-                                Console.WriteLine("Room Number :");
-                                bool numberCheck = Int32.TryParse(Console.ReadLine(), out roomNumber);
+                                roomNumber = rand.Next(0, roomList.Count);
 
-                                if (!numberCheck)
-                                {
-                                    Console.WriteLine("Romm Number Check(Enter)");
-                                    Console.ReadLine();
-                                    continue;
-                                }
                                 CFRoomJoinRequest CFJR = new CFRoomJoinRequest();
                                 CFJR.roomNum = roomNumber;
 
                                 if (serverList[0].trysendmsg(HhhHelper.Code.JOIN, CFHelper.StructureToByte(CFJR)))
                                     myState = ClientState.Loading;
-                                break;
-                            }
-                            else if (lobbyMsg.ToUpper().Equals("%CREATE"))
-                            {
-                                if (serverList[0].trysendmsg(HhhHelper.Code.CREATE_ROOM))
-                                    myState = ClientState.Loading;
-                                break;
-                            }
-                            else if (lobbyMsg.ToUpper().Equals("%MODIFYPASSWORD"))
-                            {
-                                PW = null;
-                                while (true)
-                                {
-                                    Console.Write("Password : ");
-                                    PW = Console.ReadLine();
-
-                                    if (0 >= PW.Length || MAXIMUM_PW_LENGTH <= PW.Length)
-                                    {
-                                        Console.WriteLine("Password length check(Enter)");
-                                        Console.ReadLine();
-                                        continue;
-                                    }
-                                    else
-                                    {
-                                        break;
-                                    }
-                                    
-                                }
-                                CFUpdateUserRequest CFUR = new CFUpdateUserRequest(PW.ToCharArray());
-                                serverList[0].trysendmsg(HhhHelper.Code.UPDATE_USER, CFHelper.StructureToByte(CFUR));
-
-                                break;
-                            }
-                            else if (lobbyMsg.ToUpper().Equals("%DELETEACCOUNT"))
-                            {
-                                if (serverList[0].trysendmsg(HhhHelper.Code.DELETE_USER))
-                                    myState = ClientState.Loading;
-                                break;
-                            }
-                            else if (lobbyMsg.ToUpper().Equals("%LOGOUT"))
-                            {
-                                serverList[0].trysendmsg(HhhHelper.Code.SIGNOUT);
-                                Start();
-                                break;
-                            }
-                            else if (lobbyMsg.ToUpper().Equals("%UPDATE"))
-                            {
-                                myState = ClientState.Loading;
-                                serverList[0].trysendmsg(HhhHelper.Code.ROOM_LIST);
-                                break;
-                            }
-
-
-                            else
-                            {
-                                Console.WriteLine("check commands");
                             }
                         }
+                        else
+                        {
+                            //create
+                            if (serverList[0].trysendmsg(HhhHelper.Code.CREATE_ROOM))
+                                myState = ClientState.Loading;
+                        }
                         break;
-                    #endregion
-                    //in Room , LeaveRoom()
-                    #region case ClientState.Room:
+                    
+                    
                     case ClientState.Room:
 
                         string msg;
                         
-                        Console.WriteLine("Enter Room : " + string.Format("{0:000}", roomNumber));
-                        Console.WriteLine("-- %Leave / %Logout--");
+                            DateTime currTime = DateTime.Now;
+                        int i = 0;
                         do
                         {
-                            Console.Write("send :");
-                            msg = Console.ReadLine();
-
+                            msg = "";
+                            msg = IDPW + currTime.ToString(); ;
+                            i++;
+                            if(i> (currTime.Millisecond / 100) + 2)
+                            {
+                                msg = "";
+                                msg = "%LEAVE";
+                            }
                             MessageProcess(msg);
-                            Delay(100);
+                            Delay(2000);
                         } while (myState == ClientState.Room);
 
                         break;
-
-                        #endregion
                 }
             }
         }
@@ -340,36 +197,16 @@ namespace client
             switch (protocol.header.code)
             {
                 case HhhHelper.Code.SIGNUP_FAIL:
-                    errormsg = "SIGNUP_FAIL";
+                    CFLoginRequest logininfo = new CFLoginRequest(IDPW.ToCharArray(), IDPW.ToCharArray());
+                    serverList[0].trysendmsg(HhhHelper.Code.SIGNUP, CFHelper.StructureToByte(logininfo));
                     myState = ClientState.Connect;
                     break;
 
                 case HhhHelper.Code.SIGNUP_SUCCESS:
-                    errormsg = "SIGNUP_SUCCESS";
-                    myState = ClientState.Connect;
+                    CFLoginRequest sulogininfo = new CFLoginRequest(IDPW.ToCharArray(), IDPW.ToCharArray());
+                    serverList[0].trysendmsg(HhhHelper.Code.SIGNUP, CFHelper.StructureToByte(sulogininfo));
                     break;
 
-                case HhhHelper.Code.UPDATE_USER_FAIL:
-                    errormsg = "UPDATE_USER_FAIL";
-                    break;
-
-                case HhhHelper.Code.UPDATE_USER_SUCCESS:
-                    errormsg = "UPDATE_USER_SUCCESS";
-                    break;
-
-                case HhhHelper.Code.DELETE_USER_FAIL:
-                    errormsg = "DELETE_USER_FAIL";
-                    break;
-
-                case HhhHelper.Code.DELETE_USER_SUCCESS:
-                    errormsg = "DELETE_USER_SUCCESS";
-                    //myState = ClientState.Login;
-                    Start();
-                    break;
-
-                case HhhHelper.Code.SIGNOUT_SUCCESS:
-                    Start();
-                    break;
                 case HhhHelper.Code.SIGNIN_FAIL:
                     errormsg = "SIGNIN_FAIL";
                     myState = ClientState.Connect;
@@ -380,6 +217,7 @@ namespace client
 
                     //cookie
                     roomConnectionINFO = (CFSigninResponse)CFHelper.ByteToStructure(protocol.data, typeof(CFSigninResponse));
+                    Console.WriteLine(roomConnectionINFO);
                     string IP = new string(roomConnectionINFO.ip).Replace("\0", string.Empty);
                     ServerControl CPControl = new ServerControl(IP, roomConnectionINFO.port);
                     CPControl.Disconnect = Disconnection;
@@ -396,27 +234,11 @@ namespace client
                 case HhhHelper.Code.INITIALIZE_FAIL:
                     errormsg = "INITIALIZE_FAIL";
                     serverList?[1].Disconnection();
-
-                    if (Initialize > 0)
-                    {
-                        string INITIALIZE_FAIL_IP = new string(roomConnectionINFO.ip).Replace("\0", string.Empty);
-                        ServerControl INITIALIZE_FAIL_CPControl = new ServerControl(INITIALIZE_FAIL_IP, roomConnectionINFO.port);
-                        INITIALIZE_FAIL_CPControl.Disconnect = Disconnection;
-                        INITIALIZE_FAIL_CPControl.DataAnalysis = DataAnalysis;
-                        INITIALIZE_FAIL_CPControl.CPconnect = CPconnect;
-                        INITIALIZE_FAIL_CPControl.name = "room";
-                        INITIALIZE_FAIL_CPControl.tryconnect();
-
-                        serverList.Add(INITIALIZE_FAIL_CPControl);
-                        break;
-                    }
-
                     myState = ClientState.Lobby;
                     break;
 
                     //cp success
                 case HhhHelper.Code.INITIALIZE_SUCCESS:
-                    Initialize = 5;
                     errormsg = "INITIALIZE_SUCCESS";
                     lock (serverList)
                     {
@@ -474,6 +296,7 @@ namespace client
 
                     }catch(Exception e)
                     {
+
                         Console.WriteLine(e.ToString());
                         Console.ReadLine();
                     }
@@ -528,6 +351,7 @@ namespace client
                     break;
 
                 case HhhHelper.Code.HEARTBEAT_SUCCESS:
+                    Console.WriteLine("HBHBHBHBHBHBHBHBHB");
                     break;
 
                 case HhhHelper.Code.HEARTBEAT:
@@ -548,7 +372,7 @@ namespace client
 
                 case "%LOGOUT":
                     serverList[0].trysendmsg(HhhHelper.Code.SIGNOUT);
-                    Start();
+                    Start(IDPW);
                     break;
 
                 default:
@@ -583,7 +407,7 @@ namespace client
 
         private void ResetState()
         {
-            Console.Clear();
+            //Console.Clear();
             if (errormsg != "")
             {
                 Console.WriteLine(errormsg);

@@ -122,7 +122,6 @@ namespace Junhaehok
             public const ushort CONNECTION_PASS = 650; //BE -> FE (user is going your way with this cookie)
             public const ushort CONNECTION_PASS_SUCCESS = 652;
             public const ushort CONNECTION_PASS_FAIL = 655;
-            public const ushort CONNECTION_PASS_RECEIVED = 660;
 
             public const ushort LEAVE_ROOM = 700;
             public const ushort LEAVE_ROOM_SUCCESS = 702;

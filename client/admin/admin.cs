@@ -175,18 +175,18 @@ namespace Admin
                     #region case AdminState.ServerState:
                     case AdminState.ServerState://
 
-                        Console.WriteLine("+--------------------------------------------------------------------+");
-                        Console.WriteLine("|   {0,-5} |   {1,15} |   {2,-10} |   {3,-10} |  {4,-5} |", "ID", "Server", "RoomCount", "UserCount", "alive");
-                        Console.WriteLine("+--------------------------------------------------------------------+");
+                        Console.WriteLine("+----------------------------------------------------------------------+");
+                        Console.WriteLine("|   {0,-5} |     {1,15} |   {2,-10} |   {3,-10} |  {4,-5} |", "ID", "Server", "RoomCount", "UserCount", "alive");
+                        Console.WriteLine("+----------------------------------------------------------------------+");
 
                         for (int i = 0; i < agentList.Count; i++)
                         {
-                            Console.WriteLine("|   {0,5:###} |   {1,15} |   {2,10:##0} |   {3,10:##0} |  {4,5} |", i + 1, agentList[i].myIPEP.Port, agentList[i].roomCount, agentList[i].userCount, agentList[i].alive);
+                            Console.WriteLine("|   {0,5:###} |   {1,15} |   {2,10:##0} |   {3,10:##0} |  {4,5} |", i + 1, agentList[i].adminSock.RemoteEndPoint, agentList[i].roomCount, agentList[i].userCount, agentList[i].alive);
                         }
-                        Console.WriteLine("+--------------------------------------------------------------------+");
-                        Console.WriteLine("|#     1. userstate      2. serverstate      3. SERVER_STOP         #|");
-                        Console.WriteLine("|#     4. SERVER_START   5. SERVER_RESTART   6. MONITOR             #|");
-                        Console.WriteLine("+--------------------------------------------------------------------+");
+                        Console.WriteLine("+----------------------------------------------------------------------+");
+                        Console.WriteLine("|#     1. userstate       2. serverstate       3. SERVER_STOP         #|");
+                        Console.WriteLine("|#     4. SERVER_START    5. SERVER_RESTART    6. MONITOR             #|");
+                        Console.WriteLine("+----------------------------------------------------------------------+");
                         while (true)
                         {
                             Console.Write(">>>");
@@ -206,16 +206,16 @@ namespace Admin
                     #region case AdminState.Monitor:
                     case AdminState.Monitor:
 
-                        Console.WriteLine("+--------------------------------------------------------------------+");
-                        Console.WriteLine("|   {0,-5} |   {1,15} |   {2,-10} |   {3,-10} |  {4,-5} |", "ID", "Server", "RoomCount", "UserCount", "alive");
-                        Console.WriteLine("+--------------------------------------------------------------------+");
+                        Console.WriteLine("+------------------------------------------------------------------------+");
+                        Console.WriteLine("|   {0,-5} |       {1,15} |   {2,-10} |   {3,-10} |  {4,-5} |", "ID", "Server", "RoomCount", "UserCount", "alive");
+                        Console.WriteLine("+------------------------------------------------------------------------+");
 
                         for (int i = 0; i < agentList.Count; i++)
                         {
-                            Console.WriteLine("|   {0,5:###} |   {1,15} |   {2,10:##0} |   {3,10:##0} |  {4,5} |", i + 1, agentList[i].myIPEP.Port, agentList[i].roomCount, agentList[i].userCount, agentList[i].alive);
+                            Console.WriteLine("|   {0,5:###} |     {1,15} |   {2,10:##0} |   {3,10:##0} |  {4,5} |", i + 1, agentList[i].adminSock.RemoteEndPoint, agentList[i].roomCount, agentList[i].userCount, agentList[i].alive);
                         }
 
-                        Console.WriteLine("+--------------------------------------------------------------------+");
+                        Console.WriteLine("+------------------------------------------------------------------------+");
                         Console.WriteLine("##             1. userstate              2. serverstate             ##\n"); //commands
 
                         

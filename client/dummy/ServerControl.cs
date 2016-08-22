@@ -176,7 +176,7 @@ namespace client
                 return false;
 
             sendPacket.header.code = command;
-            sendPacket.header.uid=Client.uid;
+            sendPacket.header.uid=Dummy.uid;
 
             if (data == null)
             {
@@ -188,11 +188,16 @@ namespace client
                 sendPacket.data = data;
                 sendPacket.header.size = (ushort)sendPacket.data.Length;
             }
+            try
+            {
+                byte[] szData = HhhHelper.PacketToBytes(sendPacket);
+                sendEvent.SetBuffer(szData, 0, szData.Length);
+                servsocket.SendAsync(sendEvent);
+            }
+            catch (InvalidOperationException invaoper_e)
+            {
 
-            byte[] szData = HhhHelper.PacketToBytes(sendPacket);
-            sendEvent.SetBuffer(szData, 0, szData.Length);
-            servsocket.SendAsync(sendEvent);
-
+            }
             return true;
         }
         public void Disconnection()         // calling at client.cs
@@ -200,7 +205,6 @@ namespace client
             //init socket
             if (servsocket != null ? servsocket.Connected : false)
             {
-                servsocket.Shutdown(SocketShutdown.Both);
                 servsocket.Close();
             }
 
@@ -302,7 +306,7 @@ namespace client
             //init socket
             if (websock != null ? websock.IsAlive : false)
             {
-                websock.Close();
+                websock.CloseAsync();
             }
 
             //heartbeat stop
@@ -321,7 +325,7 @@ namespace client
                 return false;
 
             sendPacket.header.code = command;
-            sendPacket.header.uid = Client.uid;
+            sendPacket.header.uid = Dummy.uid;
 
             if (data == null)
             {
