@@ -15,3 +15,5 @@ C:\Users\askdnwn\Desktop\client\client\obj\Debug\client.pdb
 C:\Users\askdnwn\Desktop\client\client\bin\Debug\client.exe
 C:\Users\askdnwn\Desktop\client\client\bin\Debug\client.pdb
 C:\Users\askdnwn\Desktop\client\client\obj\Debug\client.csprojResolveAssemblyReference.cache
+C:\Users\askdnwn\Desktop\client\client\bin\Debug\websocket-sharp.dll
+C:\Users\askdnwn\Desktop\client\client\bin\Debug\websocket-sharp.xml

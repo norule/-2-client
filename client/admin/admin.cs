@@ -25,18 +25,7 @@ namespace Admin
         private SocketAsyncEventArgs receiveHeaderEvent = new SocketAsyncEventArgs();
         private SocketAsyncEventArgs sendEvent = new SocketAsyncEventArgs();
          
-        public struct UserHandle
-        {
-            public int Rank;
-            public string ID;
-            public int MSGCOUNT;
-            public UserHandle(int r, string i, int mc)
-            {
-                Rank = r;
-                ID = i;
-                MSGCOUNT = mc;
-            }
-        }
+        
         enum AdminState
         {
             None = 0,
@@ -92,8 +81,6 @@ namespace Admin
             {
                 case HhhHelper.Code.SERVER_RESTART_SUCCESS:
                 case HhhHelper.Code.SERVER_START_SUCCESS:
-                    break;
-
                 case HhhHelper.Code.SERVER_STOP_SUCCESS:
                     break;
                  
@@ -109,12 +96,17 @@ namespace Admin
                     break;
 
                 case HhhHelper.Code.RANKINGS_SUCCESS:
-                    //화면 새로 고침
+
+                    //"ID:RANK:MSGCOUNT;ID..";
+                    UserHandle[] ranking = (UserHandle[])AAHelper.ByteToRanking(protocol.data, typeof(UserHandle));
+                    foreach (UserHandle rank in ranking)
+                    {
+                        userList.Add(rank);
+                    }
+
                     myState = AdminState.UserINFO;
                     break;
 
-
-                    //페일류 에러메시짘
                 case HhhHelper.Code.SERVER_START_FAIL:
                     break;
 
@@ -134,7 +126,7 @@ namespace Admin
                     break;
             }
         }
-
+        
         private void Process()
         {
             while (true)
@@ -158,14 +150,14 @@ namespace Admin
 
                         for (int i = 0; i < userList.Count; i++)
                         {
-                            Console.WriteLine("|   {0,4} |   {1,12} |   {2,10} |", i + 1, userList[i].ID, userList[i].MSGCOUNT);
+                            Console.WriteLine("|   {0,4} |   {1,12} |   {2,10} |", userList[i].Rank, new string(userList[i].ID), userList[i].MSGCOUNT);
                         }
 
                         Console.WriteLine("+----------------------------------------+");
 
-                        Console.WriteLine("##   1. userstate     2. serverstate    ##");
-                        Console.WriteLine("##   3. monitor       4. deleteUser     ##\n\n");
-
+                        Console.WriteLine("|#   1. userstate     2. serverstate    #|");
+                        Console.WriteLine("|#   3. monitor                         #|");
+                        Console.WriteLine("+----------------------------------------+");
 
                         while (true)
                         {
@@ -173,8 +165,9 @@ namespace Admin
 
                             Console.Write(">>>");
                             userControlMSG = Console.ReadLine();
-                             
-                            UserCommandProcess(userControlMSG);
+
+                            if (UserCommandProcess(userControlMSG))
+                                break;
                         }
                         break;
                     #endregion
@@ -191,9 +184,9 @@ namespace Admin
                             Console.WriteLine("|   {0,5:###} |   {1,15} |   {2,10:##0} |   {3,10:##0} |  {4,5} |", i + 1, agentList[i].myIPEP.Port, agentList[i].roomCount, agentList[i].userCount, agentList[i].alive);
                         }
                         Console.WriteLine("+--------------------------------------------------------------------+");
-                        Console.WriteLine("##     1. userstate      2. serverstate        3. SERVER_STOP       ##");
-                        Console.WriteLine("##     4. SERVER_START   5. SERVER_RESTART   6. MONITOR             ##\n\n");
-
+                        Console.WriteLine("|#     1. userstate      2. serverstate      3. SERVER_STOP         #|");
+                        Console.WriteLine("|#     4. SERVER_START   5. SERVER_RESTART   6. MONITOR             #|");
+                        Console.WriteLine("+--------------------------------------------------------------------+");
                         while (true)
                         {
                             Console.Write(">>>");
@@ -225,22 +218,25 @@ namespace Admin
                         Console.WriteLine("+--------------------------------------------------------------------+");
                         Console.WriteLine("##             1. userstate              2. serverstate             ##\n"); //commands
 
+                        
                         string input = Console.ReadLine();
                         int Usercommand;
                         if (Int32.TryParse(input, out Usercommand))
                         {
                             if (Usercommand == 1)
                             {
-                                myState = AdminState.UserINFO;
+                                LiveAgent(HhhHelper.Code.RANKINGS);
+                                myState = AdminState.None;
                                 break;
                             }
                             else if (Usercommand == 2)
                             {
+                                LiveAgent(HhhHelper.Code.SERVER_INFO);
                                 myState = AdminState.ServerState;
                                 break;
                             }
                         }
-
+                        
                         break;
                         #endregion
 
@@ -256,8 +252,8 @@ namespace Admin
             switch (input)
             {
                 case 1:
-                    //유저인포 요청 센드
-                    myState = AdminState.UserINFO;
+                    LiveAgent(HhhHelper.Code.RANKINGS);
+                    myState = AdminState.None;
                     return true;
 
                 case 2:
@@ -266,6 +262,7 @@ namespace Admin
 
                 case 6:
                     ServerinfoRequestandNone();
+                    myState = AdminState.Monitor;
                     return true;
 
                 case 3:
@@ -294,8 +291,6 @@ namespace Admin
                                 Console.WriteLine("try agin");
                             }
                         }
-                        
-
                     }//while
                     Thread.Sleep(100);
                     ServerinfoRequestandNone();
@@ -323,7 +318,6 @@ namespace Admin
             {
                 agentList[i].SendMSG(HhhHelper.Code.SERVER_INFO);
             }
-            myState = AdminState.None;
         }
         /// <summary>
         /// exist command => return true, no exist command => return false;
@@ -333,27 +327,18 @@ namespace Admin
             switch (input.ToUpper())
             {
                 case "1":
+                    myState = AdminState.None;
                     LiveAgent(HhhHelper.Code.RANKINGS);
                     return true;
 
                 case "2":
-                    LiveAgent(HhhHelper.Code.SERVER_INFO);
+                    ServerinfoRequestandNone();
                     myState = AdminState.ServerState;
                     return true;
 
                 case "3":
-                    LiveAgent(HhhHelper.Code.SERVER_INFO);
-                    myState = AdminState.Monitor;
-                    return true;
-
-                case "4":
-
-                    Console.Write("USER ID :");
-                    string deleteID = Console.ReadLine();
-
-                    AADeleteUserRequest ADR = new AADeleteUserRequest(deleteID);
-                    LiveAgent(HhhHelper.Code.DELETE_USER,AAHelper.StructureToByte(ADR));
-
+                    ServerinfoRequestandNone();
+                    myState = AdminState.None;
                     return true;
 
                 default:

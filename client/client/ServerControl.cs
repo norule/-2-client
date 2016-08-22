@@ -7,14 +7,24 @@ using System.Net;
 using System.Net.Sockets;
 using Junhaehok;
 using CF_Protocol;
+using WebSocketSharp;
 
 namespace client
 {
+    public delegate bool TrySendMSG(ushort command, byte[] data = null);
+    public delegate void TryConnect();
     public class ServerControl
     {
+
+        private WebSocket websock;
+        private StringBuilder host = new StringBuilder();
+
         public string name;
-        public dgDisconnect Disconnect;//본체용
-        public dgDataProcess DataAnalysis;
+        private bool web = false;                   //check web server
+        public TryConnect tryconnect;
+        public TrySendMSG trysendmsg;
+        public dgDisconnect Disconnect;             //client.cs
+        public dgDataProcess DataAnalysis;          //client.cs
         public dgConnect CPconnect = null;
 
         private const int HEARTBEATINTERVAL = 30;
@@ -33,13 +43,31 @@ namespace client
         private SocketAsyncEventArgs sendEvent = new SocketAsyncEventArgs();
         private SocketAsyncEventArgs receiveHeaderEvent = new SocketAsyncEventArgs();
 
-        public ServerControl(string ip, int port)
-        {
-            myIPEP = new IPEndPoint(IPAddress.Parse(ip), port);
-            servsocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        }
 
-        public void Connecting()
+
+        public ServerControl(string ip, int port)  // calling at client.cs
+        {
+            if (port != 80)
+            {
+                myIPEP = new IPEndPoint(IPAddress.Parse(ip), port);
+
+                tryconnect = SockConnecting;
+                trysendmsg = SendMSG;
+            }
+            else
+            {
+                web = true;
+                host.Append("ws://");
+                host.Append(ip);
+                host.Append(":");
+                host.Append(port.ToString());
+                tryconnect = WebConnect;
+                //trysendmsg = ;
+
+            }
+        }
+        #region sock
+        public void SockConnecting()    // calling at client.cs
         {
             //init socket
             Socket s = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -72,14 +100,12 @@ namespace client
                 receiveHeaderEvent.Completed += new EventHandler<SocketAsyncEventArgs>(ReceiveHeader_Completed);
                 //request receive
                 TryReceiveAsync(servsocket, receiveHeaderEvent);
-                Console.WriteLine("*** Connected ***");
 
                 //heartbeat
                 heartbeatTimer = new System.Timers.Timer();
                 heartbeatTimer.Interval = HEARTBEATINTERVAL * 1000;
                 heartbeatTimer.Elapsed += new System.Timers.ElapsedEventHandler(CheckHeartbeat);
                 heartbeatTimer.Start();
-                //SendMSG(HhhHelper.Code.HEARTBEAT);
 
                 //connection passing
                 CPconnect?.Invoke(this);
@@ -143,7 +169,7 @@ namespace client
             }
             //SendMSG(HhhHelper.Code.HEARTBEAT);
         }
-        public bool SendMSG(ushort command, byte[] data = null)
+        public bool SendMSG(ushort command, byte[] data = null) // calling at client.cs
         {
             sendPacket = new Packet();
 
@@ -170,8 +196,7 @@ namespace client
 
             return true;
         }
-
-        public void Disconnection()
+        public void Disconnection()         // calling at client.cs
         {
             //init socket
             if (servsocket != null ? servsocket.Connected : false)
@@ -194,16 +219,86 @@ namespace client
                 sock.ReceiveAsync(sevent);
                 
             }
-            catch (SocketException e)
+            catch (SocketException sock_e)
             {
-                Console.WriteLine(e.ToString());
-                
+                Console.WriteLine(sock_e.ToString());
+                Disconnection();
             }
-            catch (InvalidOperationException e2)
+            catch (InvalidOperationException invaoper_e)
             {
                 
             }
 
+        }
+        #endregion
+
+
+        private void WebConnect()
+        {
+            websock = new WebSocket(host.ToString());
+
+            websock.OnOpen += WebOpenHandle;
+            websock.OnMessage += WebMSGHandle;
+            websock.OnClose += WebCloseHandle;
+            websock.OnError += WebErrorHandle;
+
+            websock.ConnectAsync();
+
+            //connectionTimer
+            connectionTimeout.Interval = CONNECTIONTIMEOUT * 1000;
+            connectionTimeout.Elapsed += (sender, e) => { connectionTimeout.Stop(); Disconnection(); };
+            connectionTimeout.Start();
+        }
+
+        private void WebOpenHandle(object sender, EventArgs e)
+        {
+            connectionTimeout.Stop();
+            WebSocket connectSocket = (WebSocket)sender;
+            websock = connectSocket;
+
+            //connected
+            if (true == connectSocket.IsAlive)
+            { 
+                //heartbeat
+                heartbeatTimer = new System.Timers.Timer();
+                heartbeatTimer.Interval = HEARTBEATINTERVAL * 1000;
+                heartbeatTimer.Elapsed += new System.Timers.ElapsedEventHandler(CheckHeartbeat);
+                heartbeatTimer.Start();
+
+                //connection passing
+                CPconnect?.Invoke(this);
+            }
+            else
+            {
+                Disconnection();                    ////웹소켓으로 바꿔
+            }
+        }
+        private void WebErrorHandle(object sender, ErrorEventArgs e)
+        {
+            Console.WriteLine(e.Message);
+            //disconnection
+        }
+        private void WebCloseHandle(object sender, CloseEventArgs e)
+        {
+
+        }
+        private void WebMSGHandle(object sender, MessageEventArgs e)
+        {
+
+        }
+        
+
+        private void OnSendComplete(bool t)
+        {
+
+        }
+        private void OnConnectComplete(bool t)
+        {
+
+        }
+        private void CloseAsync(bool t)
+        {
+            
         }
     }
 }

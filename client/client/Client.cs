@@ -66,7 +66,7 @@ namespace client
             loginServer.DataAnalysis = DataAnalysis;
             loginServer.Disconnect = Disconnection;
             loginServer.name = "login";
-            loginServer.Connecting();
+            loginServer.tryconnect();
 
             lock (serverList)
                 serverList.Add(loginServer);
@@ -142,12 +142,12 @@ namespace client
                         switch (Usercommand) 
                         {
                             case 1:
-                                if (serverList[0].SendMSG(HhhHelper.Code.SIGNUP, CFHelper.StructureToByte(logininfo)))
+                                if (serverList[0].trysendmsg(HhhHelper.Code.SIGNUP, CFHelper.StructureToByte(logininfo)))
                                     myState = ClientState.Loading;
                                 break;
 
                             case 2:
-                                if (serverList[0].SendMSG(HhhHelper.Code.SIGNIN, CFHelper.StructureToByte(logininfo)))
+                                if (serverList[0].trysendmsg(HhhHelper.Code.SIGNIN, CFHelper.StructureToByte(logininfo)))
                                     myState = ClientState.Loading;
                                 break;
                         }
@@ -229,13 +229,13 @@ namespace client
                                 CFRoomJoinRequest CFJR = new CFRoomJoinRequest();
                                 CFJR.roomNum = roomNumber;
 
-                                if (serverList[0].SendMSG(HhhHelper.Code.JOIN, CFHelper.StructureToByte(CFJR)))
+                                if (serverList[0].trysendmsg(HhhHelper.Code.JOIN, CFHelper.StructureToByte(CFJR)))
                                     myState = ClientState.Loading;
                                 break;
                             }
                             else if (lobbyMsg.ToUpper().Equals("%CREATE"))
                             {
-                                if (serverList[0].SendMSG(HhhHelper.Code.CREATE_ROOM))
+                                if (serverList[0].trysendmsg(HhhHelper.Code.CREATE_ROOM))
                                     myState = ClientState.Loading;
                                 break;
                             }
@@ -260,26 +260,27 @@ namespace client
                                     
                                 }
                                 CFUpdateUserRequest CFUR = new CFUpdateUserRequest(PW.ToCharArray());
-                                serverList[0].SendMSG(HhhHelper.Code.UPDATE_USER, CFHelper.StructureToByte(CFUR));
+                                serverList[0].trysendmsg(HhhHelper.Code.UPDATE_USER, CFHelper.StructureToByte(CFUR));
 
                                 break;
                             }
                             else if (lobbyMsg.ToUpper().Equals("%DELETEACCOUNT"))
                             {
-                                if (serverList[0].SendMSG(HhhHelper.Code.DELETE_USER))
+                                if (serverList[0].trysendmsg(HhhHelper.Code.DELETE_USER))
                                     myState = ClientState.Loading;
                                 break;
                             }
                             else if (lobbyMsg.ToUpper().Equals("%LOGOUT"))
                             {
-                                myState = ClientState.Login;
-                                serverList[0].SendMSG(HhhHelper.Code.SIGNOUT);
+                                Start();
+                                //myState = ClientState.Connect;
+                                serverList[0].trysendmsg(HhhHelper.Code.SIGNOUT);
                                 break;
                             }
                             else if (lobbyMsg.ToUpper().Equals("%UPDATE"))
                             {
                                 myState = ClientState.Loading;
-                                serverList[0].SendMSG(HhhHelper.Code.ROOM_LIST);
+                                serverList[0].trysendmsg(HhhHelper.Code.ROOM_LIST);
                                 break;
                             }
 
@@ -318,7 +319,7 @@ namespace client
         {
             CFInitializeRequest CFCR = new CFInitializeRequest();
             CFCR.cookie = roomConnectionINFO.cookie;
-            serv.SendMSG(HhhHelper.Code.INITIALIZE, CFHelper.StructureToByte(CFCR));
+            serv.trysendmsg(HhhHelper.Code.INITIALIZE, CFHelper.StructureToByte(CFCR));
         }
 
 
@@ -378,8 +379,9 @@ namespace client
                     CPControl.DataAnalysis = DataAnalysis;
                     CPControl.CPconnect = CPconnect;
                     CPControl.name = "room";
-                    CPControl.Connecting();
-                    
+                    CPControl.tryconnect();
+
+
                     serverList.Add(CPControl);
 
                     break;
@@ -400,13 +402,13 @@ namespace client
                         serverList[0].CPconnect = null;
                     }
                     if(roomNumber==0)
-                        serverList[0].SendMSG(HhhHelper.Code.ROOM_LIST);
+                        serverList[0].trysendmsg(HhhHelper.Code.ROOM_LIST);
                     else
                     {
                         CFRoomJoinRequest CFJR = new CFRoomJoinRequest();
                         CFJR.roomNum = roomNumber;
 
-                        if (serverList[0].SendMSG(HhhHelper.Code.JOIN, CFHelper.StructureToByte(CFJR)))
+                        if (serverList[0].trysendmsg(HhhHelper.Code.JOIN, CFHelper.StructureToByte(CFJR)))
                             myState = ClientState.Loading;
                     }
                     break;
@@ -443,7 +445,7 @@ namespace client
                         JoinCP.Disconnect = Disconnection;
                         JoinCP.DataAnalysis = DataAnalysis;
                         JoinCP.CPconnect = CPconnect;
-                        JoinCP.Connecting();
+                        JoinCP.tryconnect();
 
                         serverList.Add(JoinCP);
 
@@ -512,7 +514,7 @@ namespace client
                     break;
 
                 case HhhHelper.Code.HEARTBEAT:
-                    serv.SendMSG(HhhHelper.Code.HEARTBEAT_SUCCESS);
+                    serv.trysendmsg(HhhHelper.Code.HEARTBEAT_SUCCESS);
                     break;
             }
         }
@@ -524,16 +526,16 @@ namespace client
             {
                 case "%LEAVE":
                     myState = ClientState.Loading;
-                    serverList[0].SendMSG(HhhHelper.Code.LEAVE_ROOM);
+                    serverList[0].trysendmsg(HhhHelper.Code.LEAVE_ROOM);
                     break;
 
                 case "%LOGOUT":
-                    serverList[0].SendMSG(HhhHelper.Code.SIGNOUT);
+                    serverList[0].trysendmsg(HhhHelper.Code.SIGNOUT);
                     Start();
                     break;
 
                 default:
-                    serverList[0].SendMSG(HhhHelper.Code.MSG, Encoding.UTF8.GetBytes(inpuMSG));
+                    serverList[0].trysendmsg(HhhHelper.Code.MSG, Encoding.UTF8.GetBytes(inpuMSG));
                     break;
             }
         }
