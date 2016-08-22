@@ -20,7 +20,6 @@ namespace client
         private StringBuilder host = new StringBuilder();
 
         public string name;
-        private bool web = false;                   //check web server
         public TryConnect tryconnect;
         public TrySendMSG trysendmsg;
         public dgDisconnect Disconnect;             //client.cs
@@ -47,7 +46,7 @@ namespace client
 
         public ServerControl(string ip, int port)  // calling at client.cs
         {
-            if (port != 80)
+            if (port != 38080)
             {
                 myIPEP = new IPEndPoint(IPAddress.Parse(ip), port);
 
@@ -56,13 +55,13 @@ namespace client
             }
             else
             {
-                web = true;
                 host.Append("ws://");
                 host.Append(ip);
                 host.Append(":");
                 host.Append(port.ToString());
+                host.Append("/wsJinhyehok/");
                 tryconnect = WebConnect;
-                //trysendmsg = ;
+                trysendmsg = WebSendMSG ;
 
             }
         }
@@ -231,8 +230,7 @@ namespace client
 
         }
         #endregion
-
-
+        #region WEB
         private void WebConnect()
         {
             websock = new WebSocket(host.ToString());
@@ -249,7 +247,6 @@ namespace client
             connectionTimeout.Elapsed += (sender, e) => { connectionTimeout.Stop(); Disconnection(); };
             connectionTimeout.Start();
         }
-
         private void WebOpenHandle(object sender, EventArgs e)
         {
             connectionTimeout.Stop();
@@ -270,35 +267,84 @@ namespace client
             }
             else
             {
-                Disconnection();                    ////웹소켓으로 바꿔
+                WebDisconnection();                  
             }
         }
         private void WebErrorHandle(object sender, ErrorEventArgs e)
         {
             Console.WriteLine(e.Message);
-            //disconnection
+            Console.WriteLine(e.Exception);
+            WebDisconnection();
         }
         private void WebCloseHandle(object sender, CloseEventArgs e)
         {
-
+            WebDisconnection();
         }
         private void WebMSGHandle(object sender, MessageEventArgs e)
         {
+            heartbeat = 0;
+            WebSocket socketClient = (WebSocket)sender;
 
+            //connected
+            if (true == socketClient.IsAlive)
+            {
+                Packet receivepacket = HhhHelper.BytesToPacket(e.RawData);
+                DataAnalysis(this, receivepacket);
+            }
+            else
+            {
+                WebDisconnection();
+            }
         }
-        
-
-        private void OnSendComplete(bool t)
+        private void WebDisconnection()
         {
+            //init socket
+            if (websock != null ? websock.IsAlive : false)
+            {
+                websock.CloseAsync();
+            }
 
-        }
-        private void OnConnectComplete(bool t)
-        {
+            //heartbeat stop
+            heartbeatTimer?.Stop();
 
+            heartbeat = 0;
+            websock = null;
+
+            Disconnect(this);
         }
-        private void CloseAsync(bool t)
+        private bool WebSendMSG(ushort command, byte[] data = null)
         {
-            
+            sendPacket = new Packet();
+
+            if (websock == null)
+                return false;
+
+            sendPacket.header.code = command;
+            sendPacket.header.uid = Client.uid;
+
+            if (data == null)
+            {
+                sendPacket.data = new byte[0];
+                sendPacket.header.size = (ushort)sendPacket.data.Length;
+            }
+            else
+            {
+                sendPacket.data = data;
+                sendPacket.header.size = (ushort)sendPacket.data.Length;
+            }
+
+            byte[] szData = HhhHelper.PacketToBytes(sendPacket);
+            websock.SendAsync(szData, OnSendComplete);
+
+            return true;
         }
+        private static void OnSendComplete(bool t)
+        {
+            if (!t)
+            {
+                Console.WriteLine("WebSned Fail");
+            }
+        }
+        #endregion
     }
 }

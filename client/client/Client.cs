@@ -55,14 +55,16 @@ namespace client
             serverList = new List<ServerControl>();
             Usercommand = 0;
             myState = ClientState.Connect;
+            //myState = ClientState.Room;
             errormsg = "";
         }
         public void Start()
         {
+            //http://10.100.58.5:80/wsJinhyehok///web
             Init();
 
             ServerControl loginServer = new ServerControl("10.100.58.4", 11000);
-            //ServerControl loginServer = new ServerControl("127.0.0.1", 11000);
+            //ServerControl loginServer = new ServerControl("10.100.58.5", 80);
             loginServer.DataAnalysis = DataAnalysis;
             loginServer.Disconnect = Disconnection;
             loginServer.name = "login";
@@ -327,8 +329,6 @@ namespace client
         //data analysis
         public  void DataAnalysis(ServerControl serv,Packet protocol)
         {
-            //스테이트 변경하고 Usercommand지우면 될꺼야 아마
-            //나중에 하트비트에 옮겨
             if(uid==0)
                 uid = protocol.header.uid;
 
@@ -473,7 +473,6 @@ namespace client
 
                 case HhhHelper.Code.CREATE_ROOM_FAIL:
                     errormsg = "Create Room Fail";
-                    //실패 이유를 바디로 주려나?
                     myState = ClientState.Lobby;
                     break;
 
@@ -507,10 +506,7 @@ namespace client
                     break;
 
                 case HhhHelper.Code.HEARTBEAT_SUCCESS:
-                    if (myState == ClientState.None)
-                    {
-                        myState = ClientState.Connect;
-                    }
+                    Console.WriteLine("HBHBHBHBHBHBHBHBHB");
                     break;
 
                 case HhhHelper.Code.HEARTBEAT:
@@ -566,7 +562,7 @@ namespace client
 
         private void ResetState()
         {
-            Console.Clear();
+            //Console.Clear();
             if (errormsg != "")
             {
                 Console.WriteLine(errormsg);
