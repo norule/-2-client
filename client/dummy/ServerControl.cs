@@ -9,7 +9,7 @@ using Junhaehok;
 using CF_Protocol;
 using WebSocketSharp;
 
-namespace client
+namespace Dummy
 {
     public delegate bool TrySendMSG(ushort command, byte[] data = null);
     public delegate void TryConnect();
@@ -22,8 +22,8 @@ namespace client
         public string name;
         public TryConnect tryconnect;
         public TrySendMSG trysendmsg;
-        public dgDisconnect Disconnect;             //client.cs
-        public dgDataProcess DataAnalysis;          //client.cs
+        public dgDisconnect Disconnect;             //Dummy.cs
+        public dgDataProcess DataAnalysis;          //Dummy.cs
         public dgConnect CPconnect = null;
 
         private const int HEARTBEATINTERVAL = 30;
@@ -44,12 +44,11 @@ namespace client
 
 
 
-        public ServerControl(string ip, int port)  // calling at client.cs
+        public ServerControl(string ip, int port)  // calling at Dummy.cs
         {
             if (port != 38080)
             {
                 myIPEP = new IPEndPoint(IPAddress.Parse(ip), port);
-
                 tryconnect = SockConnecting;
                 trysendmsg = SendMSG;
             }
@@ -62,11 +61,10 @@ namespace client
                 host.Append("/wsJinhyehok/");
                 tryconnect = WebConnect;
                 trysendmsg = WebSendMSG ;
-
             }
         }
         #region sock
-        public void SockConnecting()    // calling at client.cs
+        public void SockConnecting()    // calling at Dummy.cs
         {
             //init socket
             Socket s = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -108,6 +106,8 @@ namespace client
 
                 //connection passing
                 CPconnect?.Invoke(this);
+
+                SendMSG(HhhHelper.Code.HEARTBEAT);
             }
             else
             {
@@ -162,11 +162,13 @@ namespace client
         {
             if (++heartbeat > 3)
             {
-                Disconnection();
+                if (servsocket != null)
+                    Disconnection();
+                else
+                    WebDisconnection();
                 heartbeat = 0;
                 return;
             }
-            //SendMSG(HhhHelper.Code.HEARTBEAT);
         }
         public bool SendMSG(ushort command, byte[] data = null) // calling at client.cs
         {
@@ -196,7 +198,6 @@ namespace client
             }
             catch (InvalidOperationException invaoper_e)
             {
-
             }
             return true;
         }
@@ -205,6 +206,7 @@ namespace client
             //init socket
             if (servsocket != null ? servsocket.Connected : false)
             {
+                servsocket.Shutdown(SocketShutdown.Both);
                 servsocket.Close();
             }
 
@@ -277,12 +279,14 @@ namespace client
         }
         private void WebErrorHandle(object sender, ErrorEventArgs e)
         {
-            Console.WriteLine(e.Message);
-            Console.WriteLine(e.Exception);
+            Console.Clear();
+            Console.WriteLine("Any Ket input");
             WebDisconnection();
         }
         private void WebCloseHandle(object sender, CloseEventArgs e)
         {
+            Console.Clear();
+            Console.WriteLine("Any Ket input");
             WebDisconnection();
         }
         private void WebMSGHandle(object sender, MessageEventArgs e)
@@ -337,7 +341,6 @@ namespace client
                 sendPacket.data = data;
                 sendPacket.header.size = (ushort)sendPacket.data.Length;
             }
-
             byte[] szData = HhhHelper.PacketToBytes(sendPacket);
             websock.SendAsync(szData, OnSendComplete);
 

@@ -9,7 +9,7 @@ using Junhaehok;
 using CF_Protocol;
 using WebSocketSharp;
 
-namespace client
+namespace Dummy
 {
     public delegate bool TrySendMSG(ushort command, byte[] data = null);
     public delegate void TryConnect();
@@ -26,7 +26,7 @@ namespace client
         public dgDataProcess DataAnalysis;          //client.cs
         public dgConnect CPconnect = null;
 
-        private const int HEARTBEATINTERVAL = 30;
+        private const int HEARTBEATINTERVAL = 4;
         private int heartbeat = 0;
         private Timer heartbeatTimer = new Timer();
 
@@ -42,14 +42,11 @@ namespace client
         private SocketAsyncEventArgs sendEvent = new SocketAsyncEventArgs();
         private SocketAsyncEventArgs receiveHeaderEvent = new SocketAsyncEventArgs();
 
-
-
         public ServerControl(string ip, int port)  // calling at client.cs
         {
             if (port != 38080)
             {
                 myIPEP = new IPEndPoint(IPAddress.Parse(ip), port);
-
                 tryconnect = SockConnecting;
                 trysendmsg = SendMSG;
             }
@@ -62,9 +59,9 @@ namespace client
                 host.Append("/wsJinhyehok/");
                 tryconnect = WebConnect;
                 trysendmsg = WebSendMSG ;
-
             }
         }
+
         #region sock
         public void SockConnecting()    // calling at client.cs
         {
@@ -108,6 +105,8 @@ namespace client
 
                 //connection passing
                 CPconnect?.Invoke(this);
+
+                SendMSG(HhhHelper.Code.HEARTBEAT);
             }
             else
             {
@@ -162,11 +161,13 @@ namespace client
         {
             if (++heartbeat > 3)
             {
-                Disconnection();
+                if (servsocket != null)
+                    Disconnection();
+                else
+                    WebDisconnection();
                 heartbeat = 0;
                 return;
             }
-            //SendMSG(HhhHelper.Code.HEARTBEAT);
         }
         public bool SendMSG(ushort command, byte[] data = null) // calling at client.cs
         {
@@ -188,11 +189,15 @@ namespace client
                 sendPacket.data = data;
                 sendPacket.header.size = (ushort)sendPacket.data.Length;
             }
-
-            byte[] szData = HhhHelper.PacketToBytes(sendPacket);
-            sendEvent.SetBuffer(szData, 0, szData.Length);
-            servsocket.SendAsync(sendEvent);
-
+            try
+            {
+                byte[] szData = HhhHelper.PacketToBytes(sendPacket);
+                sendEvent.SetBuffer(szData, 0, szData.Length);
+                servsocket.SendAsync(sendEvent);
+            }
+            catch (InvalidOperationException)
+            {
+            }
             return true;
         }
         public void Disconnection()         // calling at client.cs
@@ -224,7 +229,7 @@ namespace client
                 Console.WriteLine(sock_e.ToString());
                 Disconnection();
             }
-            catch (InvalidOperationException invaoper_e)
+            catch (InvalidOperationException)
             {
                 
             }
@@ -273,12 +278,16 @@ namespace client
         }
         private void WebErrorHandle(object sender, ErrorEventArgs e)
         {
-            Console.WriteLine(e.Message);
-            Console.WriteLine(e.Exception);
+            Console.Clear();
+            Console.WriteLine("*** Disconnected ***");
+            Console.WriteLine("Any Ket input");
             WebDisconnection();
         }
         private void WebCloseHandle(object sender, CloseEventArgs e)
         {
+            Console.Clear();
+            Console.WriteLine("*** Disconnected ***");
+            Console.WriteLine("Any Ket input");
             WebDisconnection();
         }
         private void WebMSGHandle(object sender, MessageEventArgs e)
@@ -333,9 +342,9 @@ namespace client
                 sendPacket.data = data;
                 sendPacket.header.size = (ushort)sendPacket.data.Length;
             }
-
             byte[] szData = HhhHelper.PacketToBytes(sendPacket);
             websock.SendAsync(szData, OnSendComplete);
+            
 
             return true;
         }

@@ -1,6 +1,7 @@
-C:\Users\askdnwn\Desktop\client\dummy\obj\Debug\client.exe
-C:\Users\askdnwn\Desktop\client\dummy\obj\Debug\client.pdb
-C:\Users\askdnwn\Desktop\client\dummy\bin\Debug\client.exe
-C:\Users\askdnwn\Desktop\client\dummy\bin\Debug\client.pdb
-C:\Users\askdnwn\Desktop\client\dummy\bin\Debug\websocket-sharp.dll
-C:\Users\askdnwn\Desktop\client\dummy\bin\Debug\websocket-sharp.xml
+C:\Users\askdnwn\Desktop\client\Dummy\bin\Debug\Dummy.exe
+C:\Users\askdnwn\Desktop\client\Dummy\bin\Debug\Dummy.pdb
+C:\Users\askdnwn\Desktop\client\Dummy\bin\Debug\websocket-sharp.dll
+C:\Users\askdnwn\Desktop\client\Dummy\bin\Debug\websocket-sharp.xml
+C:\Users\askdnwn\Desktop\client\Dummy\obj\Debug\Dummy.exe
+C:\Users\askdnwn\Desktop\client\Dummy\obj\Debug\Dummy.pdb
+C:\Users\askdnwn\Desktop\client\Dummy\obj\Debug\Dummy.csprojResolveAssemblyReference.cache

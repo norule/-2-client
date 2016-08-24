@@ -8,87 +8,110 @@ using System.Net.Sockets;
 using Junhaehok;
 using System.Timers;
 using System.Threading;
-
+using static Lognamespace.cLog;         
 namespace Admin
 {
-    public delegate void dgDataProcess(AgentControl agent,Packet protocol);
+    public delegate void dgDisconnection(AgentControl agn);
+    public delegate void dgOnconnection(AgentControl agn);
+    public delegate void dgDataProcess(AgentControl agent, Packet protocol);
     class Admin
     {
-        
         private const int CONNECTIONTIMEOUT = 5;
-        private IPEndPoint[] agentsIPEPs;
-        private static  AdminState myState;
+
+        private static AdminState myState;
+        private List<agentinfo> agentinfoList = new List<agentinfo>();
 
         private List<AgentControl> agentList = new List<AgentControl>();
         private List<UserHandle> userList = new List<UserHandle>();
+        private System.Timers.Timer reConnectrequest = new System.Timers.Timer();
 
-        private SocketAsyncEventArgs receiveHeaderEvent = new SocketAsyncEventArgs();
-        private SocketAsyncEventArgs sendEvent = new SocketAsyncEventArgs();
-         
-        
+        private StringBuilder userinput = new StringBuilder();                          //command
+        private CommnadTYPE command = 0;                                                //use to request command
+        private int serverNUM = 0;
+
         enum AdminState
         {
-            None = 0,
-            Monitor,
-            ServerState,
-            UserINFO
+            SERVERSTATE,
+            USERSTATE
         }
 
+        struct agentinfo
+        {
+            public string type;
+            public IPEndPoint ipep;
 
+            public agentinfo(string _tyep, IPEndPoint _ipep)
+            {
+                type = _tyep;
+                ipep = _ipep;
+            }
+        }                         //agent IPEP
+        enum CommnadTYPE                            //sendmessage command code
+        {
+            None = 0,
+            SERVER_START = 1200,
+            SERVER_STOP = 1270,
+            SERVER_RESTART = 1240,
+        }
 
         static void Main(string[] args)
         {
             Admin admin = new Admin();
             admin.Start();
-            admin.Process();
         }
 
         public void Start()
         {
-            string[] agentInfo= new string[0];
-            try {
+            Log("start");
+            userinput.Append(">> : ");
+            string[] agentInfo = new string[0];
+            //agents ip read
+            try
+            {
                 agentInfo = System.IO.File.ReadAllText("agents.conf").Split(',');
             }
-            catch (Exception e) {
+            catch (Exception e)
+            {
                 Console.WriteLine("\n" + e.Message);
             }
-            agentsIPEPs = new IPEndPoint[agentInfo.Count()];
-            
+
+            //agent info
             for (int i = 0; i < agentInfo.Count(); i++)
             {
-                string[] ipport = agentInfo[i].Split(':');
-                agentsIPEPs[i] = new IPEndPoint(IPAddress.Parse(ipport[0]), Int32.Parse(ipport[1]));
+                string[] agentinfo = agentInfo[i].Split(':');
+                agentinfoList.Add(new agentinfo(agentinfo[0], new IPEndPoint(IPAddress.Parse(agentinfo[1]), Int32.Parse(agentinfo[2]))));
             }
-            myState = AdminState.None;
+
+            reConnectrequest.Interval = 2000;
+            reConnectrequest.Elapsed += Initagents;
+            reConnectrequest.Start();
+            myState = AdminState.SERVERSTATE;
+
+            InputProcess();
+            PrintState();
             Initagents();
         }
 
-        private void Initagents()
+        private void Initagents(object sender = null, ElapsedEventArgs e = null)
         {
-            for (int i = 0; i < agentsIPEPs.Count(); i++)
-            {
-                AgentControl ag = new AgentControl(agentsIPEPs[i]);
+            for (int i = 0; i < agentinfoList.Count(); )
+            {//init connect agent
+                AgentControl ag = new AgentControl(agentinfoList[i].type, agentinfoList[i].ipep);
                 ag.DataAnalysis = DataAnalysis;
+                ag.removeThisConnectioinlist = DisConnection;
+                ag.removeThisWaitList = OnConnection;
                 ag.Connecting();
-                agentList.Add(ag);
+                agentinfoList.Remove(new agentinfo(ag.type, ag.myIPEP));
             }
         }
-      
 
-        public void DataAnalysis(AgentControl agent,Packet protocol)
+        public void DataAnalysis(AgentControl agent, Packet protocol)
         {
             switch (protocol.header.code)
             {
-                case HhhHelper.Code.SERVER_RESTART_SUCCESS:
-                case HhhHelper.Code.SERVER_START_SUCCESS:
-                case HhhHelper.Code.SERVER_STOP_SUCCESS:
+                case HhhHelper.Code.HEARTBEAT:
                     break;
-                 
                 case HhhHelper.Code.SERVER_INFO_SUCCESS:
-                    if (myState == AdminState.None)
-                    {
-                        myState = AdminState.Monitor;
-                    }
                     AAServerInfoResponse serverinfo = (AAServerInfoResponse)AAHelper.ByteToStructure(protocol.data, typeof(AAServerInfoResponse));
                     agent.roomCount = serverinfo.roomCount;
                     agent.userCount = serverinfo.userCount;
@@ -96,54 +119,30 @@ namespace Admin
                     break;
 
                 case HhhHelper.Code.RANKINGS_SUCCESS:
-
-                    //"ID:RANK:MSGCOUNT;ID..";
+                    userList.RemoveRange(0, userList.Count);
                     UserHandle[] ranking = (UserHandle[])AAHelper.ByteToRanking(protocol.data, typeof(UserHandle));
                     foreach (UserHandle rank in ranking)
                     {
                         userList.Add(rank);
                     }
-
-                    myState = AdminState.UserINFO;
-                    break;
-
-                case HhhHelper.Code.SERVER_START_FAIL:
-                    break;
-
-                case HhhHelper.Code.SERVER_RESTART_FAIL:
-                    break;
-
-                case HhhHelper.Code.SERVER_STOP_FAIL:
-                    break;
-
-                case HhhHelper.Code.SERVER_INFO_FAIL:
-                    break;
-
-                case HhhHelper.Code.RANKINGS_FAIL:
                     break;
 
                 default:
                     break;
             }
         }
-        
-        private void Process()
+
+        private void PrintState()
         {
             while (true)
             {
                 Console.Clear();
                 switch (myState)
                 {
-                    #region case AdminState.None:
-                    case AdminState.None:
-                        Console.WriteLine("wait");
-                        Delay(100);
-                        break;
-                    #endregion
-
                     #region case AdminState.Rank:
-                    case AdminState.UserINFO:
-
+                    case AdminState.USERSTATE:
+                        if(agentList.Count>0)
+                            agentList[0].SendMSG(HhhHelper.Code.RANKINGS);
                         Console.WriteLine("+----------------------------------------+");
                         Console.WriteLine("|  {0,5} |   {1,12} |   {2,10} |", "Rnak", "ID", "Count");
                         Console.WriteLine("+----------------------------------------+");
@@ -154,210 +153,132 @@ namespace Admin
                         }
 
                         Console.WriteLine("+----------------------------------------+");
+                        Console.WriteLine("|#   1. USERSTATE     2. SERVERSTATE    #|");
+                        Console.WriteLine("+----------------------------------------+\n\n");
+                        Console.Write(userinput);
 
-                        Console.WriteLine("|#   1. userstate     2. serverstate    #|");
-                        Console.WriteLine("|#   3. monitor                         #|");
-                        Console.WriteLine("+----------------------------------------+");
-
-                        while (true)
-                        {
-                            string userControlMSG;
-
-                            Console.Write(">>>");
-                            userControlMSG = Console.ReadLine();
-
-                            if (UserCommandProcess(userControlMSG))
-                                break;
-                        }
                         break;
                     #endregion
-
                     #region case AdminState.ServerState:
-                    case AdminState.ServerState://
-
-                        Console.WriteLine("+----------------------------------------------------------------------+");
-                        Console.WriteLine("|   {0,-5} |     {1,15} |   {2,-10} |   {3,-10} |  {4,-5} |", "ID", "Server", "RoomCount", "UserCount", "alive");
-                        Console.WriteLine("+----------------------------------------------------------------------+");
-
-                        for (int i = 0; i < agentList.Count; i++)
-                        {
-                            Console.WriteLine("|   {0,5:###} |   {1,15} |   {2,10:##0} |   {3,10:##0} |  {4,5} |", i + 1, agentList[i].adminSock.RemoteEndPoint, agentList[i].roomCount, agentList[i].userCount, agentList[i].alive);
-                        }
-                        Console.WriteLine("+----------------------------------------------------------------------+");
-                        Console.WriteLine("|#     1. userstate       2. serverstate       3. SERVER_STOP         #|");
-                        Console.WriteLine("|#     4. SERVER_START    5. SERVER_RESTART    6. MONITOR             #|");
-                        Console.WriteLine("+----------------------------------------------------------------------+");
-                        while (true)
-                        {
-                            Console.Write(">>>");
-                            string inputnum = Console.ReadLine();
-                            int command;
-                            if (Int32.TryParse(inputnum, out command))
-                            {
-                                if (ServCommandProcess(command))
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                        break;
-                    #endregion
-
-                    #region case AdminState.Monitor:
-                    case AdminState.Monitor:
-
-                        Console.WriteLine("+------------------------------------------------------------------------+");
-                        Console.WriteLine("|   {0,-5} |       {1,15} |   {2,-10} |   {3,-10} |  {4,-5} |", "ID", "Server", "RoomCount", "UserCount", "alive");
-                        Console.WriteLine("+------------------------------------------------------------------------+");
+                    case AdminState.SERVERSTATE:
+                        ServerinfoRequest();
+                        Console.WriteLine("+---------------------------------------------------------------------------------+");
+                        Console.WriteLine("|   {0,-5} |    {1,-5} |     {2,15} |   {3,-10} |   {4,-10} |  {5,-5} |", "Num", "Type", "Server", "RoomCount", "UserCount", "alive");
+                        Console.WriteLine("+---------------------------------------------------------------------------------+");
 
                         for (int i = 0; i < agentList.Count; i++)
                         {
-                            Console.WriteLine("|   {0,5:###} |     {1,15} |   {2,10:##0} |   {3,10:##0} |  {4,5} |", i + 1, agentList[i].adminSock.RemoteEndPoint, agentList[i].roomCount, agentList[i].userCount, agentList[i].alive);
+                            Console.WriteLine("|   {0,5:###} |    {1,5:###} |   {2,15} |   {3,10:##0} |   {4,10:##0} |  {5,5} |", i + 1, agentList[i].type, agentList[i].adminSock.RemoteEndPoint, agentList[i].roomCount, agentList[i].userCount, agentList[i].alive);
                         }
-
-                        Console.WriteLine("+------------------------------------------------------------------------+");
-                        Console.WriteLine("##             1. userstate              2. serverstate             ##\n"); //commands
-
-                        
-                        string input = Console.ReadLine();
-                        int Usercommand;
-                        if (Int32.TryParse(input, out Usercommand))
-                        {
-                            if (Usercommand == 1)
-                            {
-                                LiveAgent(HhhHelper.Code.RANKINGS);
-                                myState = AdminState.None;
-                                break;
-                            }
-                            else if (Usercommand == 2)
-                            {
-                                LiveAgent(HhhHelper.Code.SERVER_INFO);
-                                myState = AdminState.ServerState;
-                                break;
-                            }
-                        }
-                        
+                        Console.WriteLine("+---------------------------------------------------------------------------------+");
+                        Console.WriteLine("|#       1. USERSTATE                                                            #|");
+                        Console.WriteLine("|#       2. SERVER_START      3. SERVER_RESTART       4. SERVER_STOP             #|");
+                        Console.WriteLine("+---------------------------------------------------------------------------------+\n\n");
+                        Console.Write(userinput);
                         break;
                         #endregion
-
                 }
+                Thread.Sleep(500);
             }
         }
 
-        /// <summary>
-        /// exist command => return true, no exist command => return false;
-        /// </summary>
-        private bool ServCommandProcess(int input) 
-        {
-            switch (input)
-            {
-                case 1:
-                    LiveAgent(HhhHelper.Code.RANKINGS);
-                    myState = AdminState.None;
-                    return true;
-
-                case 2:
-                    ServerinfoRequestandNone();
-                    return true;
-
-                case 6:
-                    ServerinfoRequestandNone();
-                    myState = AdminState.Monitor;
-                    return true;
-
-                case 3:
-                case 4:
-                case 5:
-                    while (true)
-                    {
-                        int sNumber;
-                        Console.Write("ServerNumber : ");
-                        string servernumberinput = Console.ReadLine();
-
-                        if (Int32.TryParse(servernumberinput, out sNumber))
-                        {
-                            if ((sNumber > 0 && sNumber <= agentList.Count))
-                            {
-                                if (input == 3)
-                                    agentList[sNumber-1].SendMSG(HhhHelper.Code.SERVER_STOP);
-                                else if (input == 4)
-                                    agentList[sNumber-1].SendMSG(HhhHelper.Code.SERVER_START);
-                                else if (input == 5)
-                                    agentList[sNumber-1].SendMSG(HhhHelper.Code.SERVER_RESTART);
-                                break;
-                            }
-                            else
-                            {
-                                Console.WriteLine("try agin");
-                            }
-                        }
-                    }//while
-                    Thread.Sleep(100);
-                    ServerinfoRequestandNone();
-                    return true;
-
-                default:
-                    return false;
-            }
-        }
-        private void LiveAgent(ushort input, byte[] data=null )
-        {
-            for (int i = 0; i < agentList.Count; i++)
-            {
-                if (agentList[i].adminSock.Connected)
-                {
-                    agentList[i].SendMSG(input, data);
-                    break;
-                }
-            }
-        }
-
-        private void ServerinfoRequestandNone()
+        private void ServerinfoRequest()
         {
             for (int i = 0; i < agentList.Count; i++)
             {
                 agentList[i].SendMSG(HhhHelper.Code.SERVER_INFO);
             }
         }
-        /// <summary>
-        /// exist command => return true, no exist command => return false;
-        /// </summary>
-        private bool UserCommandProcess(string input)
-        {// 1. userstate  2. serverstate 3. monitor       4. deleteUser 
-            switch (input.ToUpper())
+        private void DisConnection(AgentControl agn)
+        {
+            agentinfo temp = new agentinfo(agn.type, agn.myIPEP);
+            Log(agn.myIPEP.ToString() + " disconnetion");
+            lock (agentinfoList)
             {
-                case "1":
-                    myState = AdminState.None;
-                    LiveAgent(HhhHelper.Code.RANKINGS);
-                    return true;
+                if (!agentinfoList.Contains(temp))
+                    agentinfoList.Add(temp);
+                agentList.Remove(agn);
+            }
+            agn = default(AgentControl);
 
-                case "2":
-                    ServerinfoRequestandNone();
-                    myState = AdminState.ServerState;
-                    return true;
+        }
 
-                case "3":
-                    ServerinfoRequestandNone();
-                    myState = AdminState.None;
-                    return true;
-
-                default:
-                    return false;
+        private void OnConnection(AgentControl agn)
+        {
+            Log(agn.myIPEP+" connection");
+            lock (agentinfoList)
+            {
+                if (!agentList.Contains(agn))
+                    agentList.Add(agn);
             }
         }
-        
-        private static DateTime Delay(int MS)
+
+        private async void InputProcess()
         {
-            DateTime ThisMoment = DateTime.Now;
-            TimeSpan duration = new TimeSpan(0, 0, 0, 0, MS);
-            DateTime AfterWards = ThisMoment.Add(duration);
-
-            while (AfterWards >= ThisMoment)
+            while (true)
             {
-                ThisMoment = DateTime.Now;
+                await Task.Run(() => Keyinput());
             }
+        }
 
-            return DateTime.Now;
+        private void Keyinput()
+        {
+            ConsoleKeyInfo input = Console.ReadKey();
+
+            if (input.Key == ConsoleKey.Enter)
+            {
+                CommandProcess();
+                return;
+            }
+            else if (input.Key == ConsoleKey.Backspace)
+            {
+                if(userinput.Length>5)
+                    userinput.Remove(userinput.Length - 1, 1);
+                return;
+            }
+            userinput.Append(input.KeyChar);
+        }
+
+        private void CommandProcess()
+        {
+            userinput.Remove(0, 5);                     //remove ">> : "
+            switch (userinput.ToString().ToUpper())
+            {
+                case "USERSTATE":
+                case "SERVERSTATE":
+                    myState = (AdminState)Enum.Parse(typeof(AdminState), userinput.ToString().ToUpper());
+                    userinput.Length = 0;
+                    userinput.Append(">> : ");
+                    break;
+
+                case "SERVER_STOP":
+                case "SERVER_START":
+                case "SERVER_RESTART":
+                    if (myState != AdminState.SERVERSTATE)
+                    {
+                        userinput.Length = 0;
+                        userinput.Append(">> : ");
+                        break;
+                    }
+                    command = (CommnadTYPE)Enum.Parse(typeof(CommnadTYPE), userinput.ToString().ToUpper());
+                    userinput.Length = 0;
+                    userinput.Append("NUM :");
+                    break;
+
+                default:
+                    if (Int32.TryParse(userinput.ToString(), out serverNUM))
+                    {
+                        if (command != 0 && serverNUM > 0 && serverNUM <= agentList.Count)
+                        {
+                            agentList[serverNUM - 1].SendMSG((ushort)command);
+                            Log(agentList[serverNUM - 1].myIPEP + " "+ command.ToString());
+                        }
+                        command = CommnadTYPE.None;
+                    }
+                    userinput.Length = 0;
+                    userinput.Append(">> : ");
+                    break;
+            }
         }
     }
 }

@@ -1,0 +1,7 @@
+C:\Users\askdnwn\Desktop\client\Dummy\bin\Release\Dummy.exe
+C:\Users\askdnwn\Desktop\client\Dummy\bin\Release\Dummy.pdb
+C:\Users\askdnwn\Desktop\client\Dummy\bin\Release\websocket-sharp.dll
+C:\Users\askdnwn\Desktop\client\Dummy\bin\Release\websocket-sharp.xml
+C:\Users\askdnwn\Desktop\client\Dummy\obj\Release\Dummy.exe
+C:\Users\askdnwn\Desktop\client\Dummy\obj\Release\Dummy.pdb
+C:\Users\askdnwn\Desktop\client\Dummy\obj\Release\Dummy.csprojResolveAssemblyReference.cache

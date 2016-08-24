@@ -1,0 +1,5 @@
+C:\Users\askdnwn\Desktop\client\dummyrun\bin\Debug\dummyrun.exe
+C:\Users\askdnwn\Desktop\client\dummyrun\bin\Debug\dummyrun.pdb
+C:\Users\askdnwn\Desktop\client\dummyrun\obj\Debug\dummyrun.exe
+C:\Users\askdnwn\Desktop\client\dummyrun\obj\Debug\dummyrun.pdb
+C:\Users\askdnwn\Desktop\client\dummyrun\obj\Debug\dummyrun.csprojResolveAssemblyReference.cache

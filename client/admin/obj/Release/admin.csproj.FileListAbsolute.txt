@@ -1,6 +1,6 @@
-C:\Users\askdnwn\Desktop\client\admin\obj\Release\admin.csprojResolveAssemblyReference.cache
 C:\Users\askdnwn\Desktop\client\admin\bin\Release\admin.exe.config
 C:\Users\askdnwn\Desktop\client\admin\bin\Release\admin.exe
 C:\Users\askdnwn\Desktop\client\admin\bin\Release\admin.pdb
 C:\Users\askdnwn\Desktop\client\admin\obj\Release\admin.exe
 C:\Users\askdnwn\Desktop\client\admin\obj\Release\admin.pdb
+C:\Users\askdnwn\Desktop\client\admin\obj\Release\admin.csprojResolveAssemblyReference.cache

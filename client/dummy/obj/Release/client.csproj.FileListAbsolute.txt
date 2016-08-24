@@ -1,5 +1,0 @@
-C:\Users\askdnwn\Desktop\client\client\bin\Release\client.exe
-C:\Users\askdnwn\Desktop\client\client\bin\Release\client.pdb
-C:\Users\askdnwn\Desktop\client\client\obj\Release\client.exe
-C:\Users\askdnwn\Desktop\client\client\obj\Release\client.pdb
-C:\Users\askdnwn\Desktop\client\client\obj\Release\client.csprojResolveAssemblyReference.cache

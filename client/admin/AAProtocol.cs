@@ -24,10 +24,9 @@ namespace Admin
         }
     }
 
-
     public static class AAHelper
     {
-        public static  UserHandle[] ByteToRanking(byte[] data, Type type)
+        public static  UserHandle[] ByteToRanking(byte[] data, Type type)       //byto array to UserHandle
         {
             int objLength = data.Length / (Marshal.SizeOf(type));
             UserHandle[] objList = new UserHandle[objLength];
@@ -36,15 +35,14 @@ namespace Admin
             {
                 byte[] tmp = new byte[Marshal.SizeOf(type)];
                 Array.Copy(data, Marshal.SizeOf(type) * idx, tmp, 0, tmp.Length);
-                IntPtr buff = Marshal.AllocHGlobal(Marshal.SizeOf(type)); // 배열의 크기만큼 비관리 메모리 영역에 메모리를 할당한다.
-                Marshal.Copy(tmp, 0, buff, tmp.Length); // 배열에 저장된 데이터를 위에서 할당한 메모리 영역에 복사한다.
-                UserHandle obj = (UserHandle)Marshal.PtrToStructure(buff, type); // 복사된 데이터를 구조체 객체로 변환한다.
-                Marshal.FreeHGlobal(buff); // 비관리 메모리 영역에 할당했던 메모리를 해제함
+                IntPtr buff = Marshal.AllocHGlobal(Marshal.SizeOf(type));
+                Marshal.Copy(tmp, 0, buff, tmp.Length); 
+                UserHandle obj = (UserHandle)Marshal.PtrToStructure(buff, type); 
+                Marshal.FreeHGlobal(buff);
                 objList[idx] = obj;
             }
             return objList;
         }
-
 
         public static byte[] StructureToByte(object obj)
         {
@@ -85,7 +83,4 @@ namespace Admin
             MSGCOUNT = mc;
         }
     }
-
-    
-
 }

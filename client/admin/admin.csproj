@@ -46,6 +46,7 @@
     <Compile Include="AAProtocol.cs" />
     <Compile Include="admin.cs" />
     <Compile Include="HHHHelper.cs" />
+    <Compile Include="Log.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AgentControl.cs" />
   </ItemGroup>

@@ -1,0 +1,4 @@
+C:\Users\askdnwn\Desktop\client\dummyrun\bin\Release\dummyrun.exe
+C:\Users\askdnwn\Desktop\client\dummyrun\bin\Release\dummyrun.pdb
+C:\Users\askdnwn\Desktop\client\dummyrun\obj\Release\dummyrun.exe
+C:\Users\askdnwn\Desktop\client\dummyrun\obj\Release\dummyrun.pdb
